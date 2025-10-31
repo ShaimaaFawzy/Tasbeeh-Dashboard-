@@ -1,0 +1,39 @@
+/**
+ * Application-wide error codes
+ *
+ * Centralized error codes for consistent error handling across the application.
+ * Each code represents a specific error scenario.
+ */
+
+export enum ErrorCode {
+  // General errors
+  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+  BAD_REQUEST = 'BAD_REQUEST',
+
+  // Authentication errors
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+  TOKEN_EXPIRED = 'TOKEN_EXPIRED',
+  TOKEN_INVALID = 'TOKEN_INVALID',
+  TOKEN_MISSING = 'TOKEN_MISSING',
+
+  // Authorization errors
+  FORBIDDEN = 'FORBIDDEN',
+  INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
+
+  // Resource errors
+  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
+  RESOURCE_ALREADY_EXISTS = 'RESOURCE_ALREADY_EXISTS',
+  RESOURCE_CONFLICT = 'RESOURCE_CONFLICT',
+
+  // User errors
+  USER_NOT_FOUND = 'USER_NOT_FOUND',
+  USER_ALREADY_EXISTS = 'USER_ALREADY_EXISTS',
+  INVALID_USER_DATA = 'INVALID_USER_DATA',
+
+  // Database errors
+  DATABASE_ERROR = 'DATABASE_ERROR',
+  DATABASE_CONNECTION_ERROR = 'DATABASE_CONNECTION_ERROR',
+}

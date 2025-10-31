@@ -11,18 +11,211 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  USER
+enum AccountStatus {
+  Active
+  Offline
+  Suspended
+  Deleted
+}
+
+enum UserType {
+  Admin
+  Normal
+}
+
+enum Provider {
+  Google
+  Apple
+  Facebook
+}
+
+enum MessageStatus {
+  Sent
+  Scheduled
+  Draft
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String        @id @default(uuid())
+  name          String        @db.VarChar(200)
+  userName      String        @db.VarChar(200)
+  password      String        
+  salt          String        @db.VarChar(50)
+  email         String        @db.VarChar(250)
+  mobile        String?       @db.VarChar(20)
+  logo          String?       
+  accountStatus AccountStatus @default(Active)
+  region        String?       @db.VarChar(50)
+  userType      UserType      @default(Normal)
+  joinDate      DateTime      @default(now())
+  lastActive    DateTime      @updatedAt
+  isDeleted     Boolean       @default(false)
+
+  // Relations
+  devices                 Device[]
+  socialLogins            UserSocialLogin[]
+  userDetails            UserDetails?
+  auditLogs              AuditLog[]
+  groupMemberships       UserGroupMember[]
+  notificationSettings   PushNotificationSettings[]
 
   @@map("users")
+}
+
+model UserSocialLogin {
+  id                    String    @id @default(uuid())
+  userId                String
+  provider              Provider
+  providerUserId        String
+  verifiedPrivateEmail  Boolean
+  rawProfileJson        String    @db.VarChar(2000)
+  accessTokenEncrypted  String    @db.VarChar(2000)
+  refreshTokenEncrypted String    @db.VarChar(2000)
+  tokenExpiresAt       DateTime
+  isDeleted            Boolean    @default(false)
+  
+  // Relations
+  user                 User      @relation(fields: [userId], references: [id])
+
+  @@map("user_social_logins")
+}
+
+model UserDetails {
+  id                          String  @id @default(uuid())
+  userId                      String  @unique
+  feeling                     String  @db.VarChar(50)
+  totalZiker                  Int
+  currentStreak              Int
+  totalStreak                Int
+  activeLoginDays            Int
+  rank                       String  @db.VarChar(10)
+  inviteCode                 String  @db.VarChar(30)
+  friendsInvited             Int
+  totalZikerByInvitedFriends Int
+  isDeleted                  Boolean @default(false)
+
+  // Relations
+  user                       User    @relation(fields: [userId], references: [id])
+
+  @@map("user_details")
+}
+
+model Device {
+  id           String   @id @default(uuid())
+  deviceId     String   @db.VarChar(50)
+  userId       String
+  paringDate   DateTime @default(now())
+  usageCount   Int      @default(0)
+  deviceStatus Boolean
+  lastSync     DateTime @updatedAt
+  isDeleted    Boolean  @default(false)
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("devices")
+}
+
+model PushNotificationSettings {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceToken  String   @db.VarChar(50)
+  platform     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id])
+  messages     PushNotificationMessages[]
+
+  @@map("push_notification_settings")
+}
+
+model PushNotificationMessages {
+  id             String        @id @default(uuid())
+  pushSettingsId String
+  messageStatus  MessageStatus
+  messageTitle   String        @db.VarChar(50)
+  messageLogo    String?
+  messageBody    String
+  scheduledDate  DateTime?
+
+  // Relations
+  settings       PushNotificationSettings @relation(fields: [pushSettingsId], references: [id])
+
+  @@map("push_notification_messages")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   @db.VarChar(50)
+  module    String   @db.VarChar(50)
+  ipAddress String   @db.VarChar(30)
+  status    Boolean
+  os        String   @db.VarChar(20)
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model UserGroup {
+  id          String   @id @default(uuid())
+  groupName   String   @db.VarChar(50)
+  description String   @db.VarChar(255)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+
+  // Relations
+  members     UserGroupMember[]
+  permissions PermissionGroup[]
+
+  @@map("user_groups")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(50)
+  description String   @db.VarChar(255)
+  module      String   @db.VarChar(50)
+  action      String   @db.VarChar(50)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  groups      PermissionGroup[]
+
+  @@map("permissions")
+}
+
+model PermissionGroup {
+  permissionId String
+  groupId      String
+  grantedAt    DateTime @default(now())
+  grantedBy    String
+
+  // Relations
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  group        UserGroup  @relation(fields: [groupId], references: [id])
+
+  @@id([permissionId, groupId])
+  @@map("permission_groups")
+}
+
+model UserGroupMember {
+  userId     String
+  groupId    String
+  assignedAt DateTime @default(now())
+  assignedBy String
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id])
+  group      UserGroup @relation(fields: [groupId], references: [id])
+
+  @@id([userId, groupId])
+  @@map("user_group_members")
 }

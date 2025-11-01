@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
+import { RegisterDTO } from './dtos/register.dto.js';
+import { LoginDTO } from './dtos/login.dto.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
-import { ApiResponse } from '../../shared/types/common.types.js';
 
 /**
  * Auth Controller
@@ -9,60 +10,51 @@ import { ApiResponse } from '../../shared/types/common.types.js';
  * Handles HTTP requests for authentication endpoints.
  * Delegates business logic to AuthService.
  */
-export class AuthController {
-  private authService: AuthService;
 
-  /**
-   * Creates a new AuthController instance
-   *
-   * @param authService - Service for authentication business logic
-   */
-  constructor(authService: AuthService) {
-    this.authService = authService;
+export class AuthController {
+  private readonly authService: AuthService;
+
+  constructor() {
+    this.authService = new AuthService();
   }
 
   /**
-   * Register a new user
-   * POST /auth/register
+   * Handle user registration
+   *
+   * POST /api/auth/register
+   *
+   * @param req - Express request object with RegisterDTO in body
+   * @param res - Express response object
    */
   register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const result = await this.authService.register(req.body);
+    const data: RegisterDTO = req.body;
 
-    const response: ApiResponse = {
+    const user = await this.authService.register(data);
+
+    res.status(201).json({
       success: true,
-      data: result,
-      message: 'Registration successful',
-    };
-
-    res.status(201).json(response);
+      message: 'User registered successfully',
+      data: user,
+    });
   });
 
   /**
-   * Login a user
-   * POST /auth/login
+   * Handle user login
+   *
+   * POST /api/auth/login
+   *
+   * @param req - Express request object with LoginDTO in body
+   * @param res - Express response object
    */
   login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const result = await this.authService.login(req.body);
+    const data: LoginDTO = req.body;
 
-    const response: ApiResponse = {
+    const result = await this.authService.login(data);
+
+    res.status(200).json({
       success: true,
-      data: result,
       message: 'Login successful',
-    };
-
-    res.json(response);
-  });
-
-  /**
-   * Get current user profile
-   * GET /auth/me
-   */
-  getCurrentUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const response: ApiResponse = {
-      success: true,
-      data: req.user,
-    };
-
-    res.json(response);
+      data: result,
+    });
   });
 }

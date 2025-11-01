@@ -45,7 +45,7 @@ const startServer = async (): Promise<void> => {
 
           logger.info('Graceful shutdown completed');
           process.exit(0);
-        } catch (error) {
+        } catch (error:any) {
           logger.error('Error during graceful shutdown:', error);
           process.exit(1);
         }
@@ -63,16 +63,16 @@ const startServer = async (): Promise<void> => {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
     // Handle uncaught errors
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', (error:any) => {
       logger.error('Uncaught Exception:', error);
       gracefulShutdown('uncaughtException');
     });
 
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      gracefulShutdown('unhandledRejection');
-    });
-  } catch (error) {
+    // process.on('unhandledRejection', (reason, promise) => {
+    //   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    //   gracefulShutdown('unhandledRejection');
+    // });
+  } catch (error:any) {
     logger.error('Failed to start server:', error);
     process.exit(1);
   }

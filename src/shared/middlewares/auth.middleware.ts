@@ -4,6 +4,7 @@ import { UnauthorizedError } from '../errors/http-errors.js';
 import { ErrorCode } from '../errors/error-codes.js';
 import { JwtPayload } from '../types/common.types.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { env } from '../../config/env.js';
 
 /**
  * Authentication Middleware
@@ -28,12 +29,9 @@ export const authenticate = asyncHandler(
 
     try {
       // Verify token
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret) {
-        throw new Error('JWT_SECRET is not defined');
-      }
-
-      const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+      const decoded = jwt.verify(token, env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      }) as JwtPayload;
 
       // Attach user to request
       req.user = decoded;
@@ -74,12 +72,9 @@ export const optionalAuthenticate = asyncHandler(
     }
 
     try {
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret) {
-        throw new Error('JWT_SECRET is not defined');
-      }
-
-      const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+      const decoded = jwt.verify(token, env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      }) as JwtPayload;
       req.user = decoded;
     } catch (error) {
       // Silently ignore invalid tokens for optional authentication

@@ -1,146 +1,239 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { User } from '@prisma/client';
-import { UserRepository } from '../users/user.repository.js';
-import { RegisterDto } from './dtos/register.dto.js';
-import { LoginDto } from './dtos/login.dto.js';
-import { UnauthorizedError, ConflictError } from '../../shared/errors/http-errors.js';
+import crypto from 'crypto';
+import { AuthRepository } from './auth.repository.js';
+import { RegisterDTO } from './dtos/register.dto.js';
+import { LoginDTO } from './dtos/login.dto.js';
+import { ConflictError, UnauthorizedError } from '../../shared/errors/http-errors.js';
 import { ErrorCode } from '../../shared/errors/error-codes.js';
-import { omit } from '../../shared/utils/helpers.js';
 import { env } from '../../config/env.js';
-
-/**
- * Authentication Response
- */
-export interface AuthResponse {
-  user: Omit<User, 'password'>;
-  token: string;
-}
+import { User, UserType } from '@prisma/client';
 
 /**
  * Auth Service
  *
- * Contains business logic for authentication operations.
+ * Contains all business logic for authentication operations.
+ * Handles user registration, login, password hashing, and JWT token generation.
  */
-export class AuthService {
-  private userRepository: UserRepository;
 
-  /**
-   * Creates a new AuthService instance
-   *
-   * @param userRepository - Repository for user data access
-   */
-  constructor(userRepository: UserRepository) {
-    this.userRepository = userRepository;
+/**
+ * Response type for successful registration
+ */
+export interface RegisterResponse {
+  id: string;
+  name: string;
+  email: string | null;
+  userName: string | null;
+  userType: UserType;
+  country: string | null;
+  city: string | null;
+}
+
+/**
+ * Response type for successful login
+ */
+export interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    userName: string | null;
+    userType: UserType;
+  };
+}
+
+/**
+ * JWT payload structure
+ */
+export interface JWTPayload {
+  userId: string;
+  email: string | null;
+  userType: UserType;
+}
+
+export class AuthService {
+  private readonly authRepository: AuthRepository;
+  private readonly saltRounds = 10;
+
+  constructor() {
+    this.authRepository = new AuthRepository();
   }
 
   /**
    * Register a new user
    *
-   * @param dto - Registration data
-   * @returns User and JWT token
-   * @throws ConflictError if email already exists
+   * Validates uniqueness of email and mobile, hashes password,
+   * and creates a new user in the database.
+   *
+   * @param data - Registration data from the client
+   * @returns User information (excluding password)
+   * @throws {ConflictError} If email or mobile already exists
    */
-  async register(dto: RegisterDto): Promise<AuthResponse> {
-    // Check if user with email already exists
-    const existingUser = await this.userRepository.findByEmail(dto.email);
-
-    if (existingUser) {
+  async register(data: RegisterDTO): Promise<RegisterResponse> {
+    // Check if email already exists
+    const existingEmail = await this.authRepository.findByEmail(data.email);
+    if (existingEmail) {
       throw new ConflictError(
-        'User with this email already exists',
+        'Email address is already registered',
         ErrorCode.USER_ALREADY_EXISTS
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
+    // Check if mobile already exists
+    const existingMobile = await this.authRepository.findByMobile(data.mobile);
+    if (existingMobile) {
+      throw new ConflictError(
+        'Mobile number is already registered',
+        ErrorCode.USER_ALREADY_EXISTS
+      );
+    }
 
-    // Create user
-    const user = await this.userRepository.create({
-      email: dto.email,
+    // Check if username already exists
+    const existingUsername = await this.authRepository.findByUsername(data.userName);
+    if (existingUsername) {
+      throw new ConflictError(
+        'Username is already taken',
+        ErrorCode.USER_ALREADY_EXISTS
+      );
+    }
+
+    // Hash the password using bcrypt
+    const hashedPassword = await bcrypt.hash(data.password, this.saltRounds);
+
+    // Create the user
+    const user = await this.authRepository.create({
+      name: data.name,
+      userName: data.userName.toLowerCase(),
+      email: data.email.toLowerCase(),
+      mobile: data.mobile,
       password: hashedPassword,
-      role: 'USER',
+      country: data.country,
+      city: data.city,
+      userType: data.userType,
+      accountStatus: 'Active',
+      isAnonymous: false,
     });
 
-    // Generate token
-    const token = this.generateToken(user);
-
+    // Return user data without sensitive information
     return {
-      user: omit(user, ['password']),
-      token,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      userName: user.userName,
+      userType: user.userType,
+      country: user.country,
+      city: user.city,
     };
   }
 
   /**
-   * Login a user
+   * Authenticate a user and generate JWT token
    *
-   * @param dto - Login credentials
-   * @returns User and JWT token
-   * @throws UnauthorizedError if credentials are invalid
+   * Validates credentials and returns a JWT token for authenticated sessions.
+   *
+   * @param data - Login credentials (email/username and password)
+   * @returns JWT token and user information
+   * @throws {UnauthorizedError} If credentials are invalid
    */
-  async login(dto: LoginDto): Promise<AuthResponse> {
-    // Find user by email
-    const user = await this.userRepository.findByEmail(dto.email);
+  async login(data: LoginDTO): Promise<LoginResponse> {
+    // Find user by email or username
+    const user = await this.authRepository.findByEmailOrUsername(data.identifier);
 
     if (!user) {
-      throw new UnauthorizedError('Invalid credentials', ErrorCode.INVALID_CREDENTIALS);
+      throw new UnauthorizedError(
+        'Invalid credentials',
+        ErrorCode.INVALID_CREDENTIALS
+      );
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid credentials', ErrorCode.INVALID_CREDENTIALS);
+      throw new UnauthorizedError(
+        'Invalid credentials',
+        ErrorCode.INVALID_CREDENTIALS
+      );
     }
 
-    // Generate token
+    // Check if account is active
+    if (user.accountStatus !== 'Active') {
+      throw new UnauthorizedError(
+        'Account is not active',
+        ErrorCode.FORBIDDEN
+      );
+    }
+
+    // Generate JWT token
     const token = this.generateToken(user);
 
+    // Return token and user information
     return {
-      user: omit(user, ['password']),
       token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        userName: user.userName,
+        userType: user.userType,
+      },
     };
   }
 
   /**
-   * Verify a JWT token
+   * Generate JWT token for authenticated user
    *
-   * @param token - JWT token to verify
-   * @returns Decoded token payload
-   * @throws UnauthorizedError if token is invalid or expired
-   */
-  async verifyToken(token: string): Promise<any> {
-    try {
-      const decoded = jwt.verify(token, env.JWT_SECRET);
-      return decoded;
-    } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        throw new UnauthorizedError('Token expired', ErrorCode.TOKEN_EXPIRED);
-      }
-
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw new UnauthorizedError('Invalid token', ErrorCode.TOKEN_INVALID);
-      }
-
-      throw error;
-    }
-  }
-
-  /**
-   * Generate a JWT token for a user
-   *
-   * @param user - User to generate token for
-   * @returns JWT token
+   * @param user - User object from database
+   * @returns Signed JWT token
+   * @private
    */
   private generateToken(user: User): string {
     const payload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      userType: user.userType,
     };
 
+    // Type assertion needed due to jsonwebtoken type definitions
     return jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
-    });
+      expiresIn: env.JWT_EXPIRES_IN as any,
+    }) as string;
+  }
+
+  /**
+   * Verify JWT token and return payload
+   *
+   * @param token - JWT token to verify
+   * @returns Decoded JWT payload
+   * @throws {UnauthorizedError} If token is invalid or expired
+   */
+  async verifyToken(token: string): Promise<JWTPayload> {
+    try {
+      const payload = jwt.verify(token, env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      }) as JWTPayload;
+
+      return payload;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedError(
+          'Token has expired',
+          ErrorCode.TOKEN_EXPIRED
+        );
+      }
+
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedError(
+          'Invalid token',
+          ErrorCode.TOKEN_INVALID
+        );
+      }
+
+      throw new UnauthorizedError(
+        'Token verification failed',
+        ErrorCode.TOKEN_INVALID
+      );
+    }
   }
 }

@@ -13,7 +13,6 @@ datasource db {
 
 enum AccountStatus {
   Active
-  Offline
   Suspended
   Deleted
 }
@@ -36,16 +35,17 @@ enum MessageStatus {
 }
 
 model User {
-  id            String        @id @default(uuid())
-  name          String        @db.VarChar(200)
-  userName      String        @db.VarChar(200)
+  id            String         @id @default(uuid())
+  name          String         @db.VarChar(200)
+  userName      String?        @db.VarChar(200)
   password      String        
-  salt          String        @db.VarChar(50)
-  email         String        @db.VarChar(250)
-  mobile        String?       @db.VarChar(20)
+  email         String?        @db.VarChar(250)
+  mobile        String?        @db.VarChar(20)
   logo          String?       
   accountStatus AccountStatus @default(Active)
-  region        String?       @db.VarChar(50)
+  isAnonymous   Boolean       @default(false)
+  country        String?       @db.VarChar(50)
+  city           String?       @db.VarChar(50)
   userType      UserType      @default(Normal)
   joinDate      DateTime      @default(now())
   lastActive    DateTime      @updatedAt

@@ -30,7 +30,7 @@ export const requireRole = (roles: string[]) => {
         throw new ForbiddenError('Authentication required', ErrorCode.UNAUTHORIZED);
       }
 
-      if (!roles.includes(req.user.role)) {
+      if (!roles.includes(req.user.userType)) {
         throw new ForbiddenError(
           'Insufficient permissions',
           ErrorCode.INSUFFICIENT_PERMISSIONS
@@ -45,7 +45,7 @@ export const requireRole = (roles: string[]) => {
 /**
  * Middleware that checks if user is an admin
  */
-export const requireAdmin = requireRole(['ADMIN']);
+export const requireAdmin = requireRole(['Admin']);
 
 /**
  * Middleware that checks if user owns the resource or is an admin
@@ -69,7 +69,7 @@ export const requireOwnershipOrAdmin = (getUserId: (req: Request) => string) => 
 
       const resourceUserId = getUserId(req);
       const isOwner = req.user.userId === resourceUserId;
-      const isAdmin = req.user.role === 'ADMIN';
+      const isAdmin = req.user.userType === 'Admin';
 
       if (!isOwner && !isAdmin) {
         throw new ForbiddenError(

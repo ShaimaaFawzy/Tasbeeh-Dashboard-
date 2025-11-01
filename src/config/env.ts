@@ -18,6 +18,15 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
+
+  // API Documentation (Swagger/OpenAPI)
+  ENABLE_SWAGGER: z
+    .string()
+    .default('true')
+    .transform((val) => val === 'true' || val === '1'),
+  API_BASE_URL: z.string().url().default('http://localhost:3000'),
+  API_TITLE: z.string().default('Tasbeeh API Documentation'),
+  API_VERSION: z.string().default('1.0.0'),
 });
 
 /**
@@ -28,8 +37,8 @@ const validateEnv = () => {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Environment validation failed:');
-      error.errors.forEach((err) => {
+      console.error('Environment validation failed:');
+      error.issues.forEach((err:any) => {
         console.error(`  - ${err.path.join('.')}: ${err.message}`);
       });
       process.exit(1);

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodObject, ZodError } from 'zod';
 import { ValidationError } from '../errors/http-errors.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
@@ -25,7 +25,7 @@ type ValidationType = 'body' | 'query' | 'params';
  *   userController.createUser
  * );
  */
-export const validate = (schema: AnyZodObject, type: ValidationType = 'body') => {
+export const validate = (schema: ZodObject, type: ValidationType = 'body') => {
   return asyncHandler(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
@@ -34,7 +34,7 @@ export const validate = (schema: AnyZodObject, type: ValidationType = 'body') =>
         next();
       } catch (error) {
         if (error instanceof ZodError) {
-          throw new ValidationError('Validation failed', error.errors);
+          throw new ValidationError('Validation failed', error.issues);
         }
         throw error;
       }
@@ -45,14 +45,14 @@ export const validate = (schema: AnyZodObject, type: ValidationType = 'body') =>
 /**
  * Convenience function to validate request body
  */
-export const validateBody = (schema: AnyZodObject) => validate(schema, 'body');
+export const validateBody = (schema: ZodObject) => validate(schema, 'body');
 
 /**
  * Convenience function to validate query parameters
  */
-export const validateQuery = (schema: AnyZodObject) => validate(schema, 'query');
+export const validateQuery = (schema: ZodObject) => validate(schema, 'query');
 
 /**
  * Convenience function to validate route parameters
  */
-export const validateParams = (schema: AnyZodObject) => validate(schema, 'params');
+export const validateParams = (schema: ZodObject) => validate(schema, 'params');

@@ -36,7 +36,7 @@ export const errorHandler = (
       error: {
         code: ErrorCode.VALIDATION_ERROR,
         message: 'Validation failed',
-        details: err.errors,
+        details: err.issues,
       },
     });
     return;

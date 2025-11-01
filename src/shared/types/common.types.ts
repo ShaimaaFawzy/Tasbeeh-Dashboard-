@@ -58,8 +58,8 @@ export interface IdParam {
  */
 export interface JwtPayload {
   userId: string;
-  email: string;
-  role: string;
+  email: string | null;
+  userType: string;
   iat?: number;
   exp?: number;
 }

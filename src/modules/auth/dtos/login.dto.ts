@@ -3,11 +3,29 @@ import { z } from 'zod';
 /**
  * Login DTO Schema
  *
- * Validation schema for user login.
+ * Defines the validation schema for user login requests.
+ * The identifier can be either an email address or username.
+ */
+
+/**
+ * Zod schema for user login
  */
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  identifier: z
+    .string({
+      message: 'Email or username is required',
+    })
+    .min(1, 'Email or username cannot be empty')
+    .trim(),
+
+  password: z
+    .string({
+      message: 'Password is required',
+    })
+    .min(1, 'Password cannot be empty'),
 });
 
-export type LoginDto = z.infer<typeof loginSchema>;
+/**
+ * Type inference from the Zod schema
+ */
+export type LoginDTO = z.infer<typeof loginSchema>;

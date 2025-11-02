@@ -27,6 +27,20 @@ const envSchema = z.object({
   API_BASE_URL: z.string().url().default('http://localhost:3000'),
   API_TITLE: z.string().default('Tasbeeh API Documentation'),
   API_VERSION: z.string().default('1.0.0'),
+
+  // Logging Configuration
+  LOG_TO_FILE: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true' || val === '1'),
+  LOG_TO_CONSOLE: z
+    .string()
+    .default('true')
+    .transform((val) => val === 'true' || val === '1'),
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
+    .default('info'),
+  LOG_DIR: z.string().default('logs'),
 });
 
 /**

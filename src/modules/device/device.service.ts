@@ -48,11 +48,12 @@ export class DeviceService {
    *
    * Validates that the device ID is unique before creating.
    *
+   * @param userId - User ID from JWT token
    * @param data - Device creation data
    * @returns Created device information
    * @throws {ConflictError} If device ID already exists
    */
-  async createDevice(data: CreateDeviceDTO): Promise<DeviceResponse> {
+  async createDevice(userId: string, data: CreateDeviceDTO): Promise<DeviceResponse> {
     // Check if device ID already exists
     const existingDevice = await this.deviceRepository.findByDeviceId(data.deviceId);
     if (existingDevice) {
@@ -68,7 +69,7 @@ export class DeviceService {
       deviceStatus: data.deviceStatus,
       usageCount: 0,
       user: {
-        connect: { id: data.userId },
+        connect: { id: userId },
       },
     });
 

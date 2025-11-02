@@ -23,13 +23,14 @@ export class DeviceController {
    *
    * POST /api/devices
    *
-   * @param req - Express request object with CreateDeviceDTO in body
+   * @param req - Express request object with CreateDeviceDTO in body and user from JWT
    * @param res - Express response object
    */
   createDevice = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const data: CreateDeviceDTO = req.body;
+    const userId = req.user!.userId;
 
-    const device = await this.deviceService.createDevice(data);
+    const device = await this.deviceService.createDevice(userId, data);
 
     res.status(201).json({
       success: true,

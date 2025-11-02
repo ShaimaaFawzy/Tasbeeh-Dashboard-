@@ -26,7 +26,7 @@ const deviceController = new DeviceController();
  * /api/devices:
  *   post:
  *     summary: Create a new device
- *     description: Register a new device and pair it with a user account. Device ID must be unique.
+ *     description: Register a new device and pair it with the authenticated user's account. User ID is automatically extracted from JWT token. Device ID must be unique.
  *     tags:
  *       - Devices
  *     security:
@@ -39,7 +39,6 @@ const deviceController = new DeviceController();
  *             $ref: '#/components/schemas/CreateDeviceRequest'
  *           example:
  *             deviceId: DEVICE-ABC-123
- *             userId: 123e4567-e89b-12d3-a456-426614174000
  *             deviceStatus: true
  *     responses:
  *       201:

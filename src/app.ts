@@ -1,7 +1,7 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import pinoHttp from 'pino-http';
+import { pinoHttp } from 'pino-http';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { logger } from './shared/utils/logger.js';
@@ -60,17 +60,23 @@ export const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // HTTP request logging
-  // app.use(
-  //   pinoHttp({
-  //     logger,
-  //     autoLogging: true,
-  //     customLogLevel: (req, res, err) => {
-  //       if (res.statusCode >= 400 && res.statusCode < 500) return 'warn';
-  //       if (res.statusCode >= 500 || err) return 'error';
-  //       return 'info';
-  //     },
-  //   })
-  // );
+  app.use(
+    pinoHttp({
+      logger,
+      autoLogging: true,
+      customLogLevel: (req: Request, res: Response, err?: Error) => {
+        if (res.statusCode >= 400 && res.statusCode < 500) return 'warn';
+        if (res.statusCode >= 500 || err) return 'error';
+        return 'info';
+      },
+      customSuccessMessage: (req: Request, res: Response) => {
+        return `${req.method} ${req.url} ${res.statusCode}`;
+      },
+      customErrorMessage: (req: Request, res: Response, err: Error) => {
+        return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
+      },
+    })
+  );
 
   // API Documentation (Swagger)
   // Only enable in development and staging environments

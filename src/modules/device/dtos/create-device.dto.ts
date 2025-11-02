@@ -18,12 +18,6 @@ export const createDeviceSchema = z.object({
     .max(50, 'Device ID must not exceed 50 characters')
     .trim(),
 
-  userId: z
-    .string({
-      message: 'User ID is required',
-    })
-    .uuid('User ID must be a valid UUID'),
-
   deviceStatus: z
     .boolean({
       message: 'Device status is required',

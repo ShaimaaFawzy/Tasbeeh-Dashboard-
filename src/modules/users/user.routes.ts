@@ -177,6 +177,9 @@ router.get('/:userId', authenticate, userController.getUserById);
  *                       items:
  *                         type: object
  *                         properties:
+ *                           Id:
+ *                             type: string
+ *                             example: 123e4567-e89b-12d3-a456-426614174000
  *                           name:
  *                             type: string
  *                             example: John Doe

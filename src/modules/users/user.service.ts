@@ -91,6 +91,7 @@ export class UserService {
 
     // Map users to response DTO
     const mappedUsers: UserItemDTO[] = users.map((user) => ({
+      Id: user.id,
       name: user.name,
       email: user.email || '',
       joinDate: user.joinDate.toISOString(),

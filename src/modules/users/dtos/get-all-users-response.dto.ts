@@ -10,6 +10,7 @@ import { z } from 'zod';
  * Single user item schema in the list
  */
 export const userItemSchema = z.object({
+  Id: z.string(),
   name: z.string(),
   email: z.string(),
   joinDate: z.string().or(z.date()),

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { DeviceService } from './device.service.js';
 import { CreateDeviceDTO } from './dtos/create-device.dto.js';
 import { UpdateDeviceDTO } from './dtos/update-device.dto.js';
+import { getAllDevicesQuerySchema } from './dtos/get-all-devices-query.dto.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
 
 /**
@@ -158,6 +159,30 @@ export class DeviceController {
       success: true,
       message: 'Device usage count incremented successfully',
       data: device,
+    });
+  });
+
+  /**
+   * Get all devices with filters and pagination (Admin only)
+   *
+   * GET /api/devices/admin/all
+   *
+   * @param req - Express request object with query params
+   * @param res - Express response object
+   */
+  getAllDevicesForAdmin = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    // Validate and parse query parameters
+    const query = getAllDevicesQuerySchema.parse(req.query);
+
+    const result = await this.deviceService.getAllDevicesForAdmin(query, req);
+
+    res.json({
+      success: true,
+      message: 'Devices retrieved successfully',
+      data: {
+        devices: result.data,
+        pagination: result.pagination,
+      },
     });
   });
 }

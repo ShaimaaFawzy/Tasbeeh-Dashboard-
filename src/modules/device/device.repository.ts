@@ -148,4 +148,84 @@ export class DeviceRepository {
       },
     });
   }
+
+  /**
+   * Find all devices with filters and pagination (for admin)
+   *
+   * @param filters - Search and filter options
+   * @param pagination - Pagination options
+   * @returns Array of devices with user information
+   */
+  async findAllWithFilters(
+    filters: {
+      search?: string;
+      filterBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
+    pagination: {
+      skip: number;
+      take: number;
+    }
+  ): Promise<Array<Device & { user: { name: string } }>> {
+    const { search, filterBy, sortOrder } = filters;
+    const { skip, take } = pagination;
+
+    // Build where clause for search
+    const where: any = {
+      isDeleted: false,
+    };
+
+    if (search) {
+      where.OR = [
+        { deviceId: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // Build orderBy clause
+    let orderBy: any = { paringDate: 'desc' };
+
+    if (filterBy === 'deviceStatus') {
+      orderBy = { deviceStatus: sortOrder || 'desc' };
+    } else if (filterBy === 'lastSync') {
+      orderBy = { lastSync: sortOrder || 'desc' };
+    }
+
+    return prisma.device.findMany({
+      where,
+      skip,
+      take,
+      orderBy,
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Count all devices matching the filters
+   *
+   * @param filters - Search and filter options
+   * @returns Total count of devices
+   */
+  async countAllWithFilters(filters: { search?: string }): Promise<number> {
+    const { search } = filters;
+
+    const where: any = {
+      isDeleted: false,
+    };
+
+    if (search) {
+      where.OR = [
+        { deviceId: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    return prisma.device.count({ where });
+  }
 }

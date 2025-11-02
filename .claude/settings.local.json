@@ -4,7 +4,8 @@
       "Bash(npm init:*)",
       "Bash(npm install:*)",
       "Bash(mkdir:*)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

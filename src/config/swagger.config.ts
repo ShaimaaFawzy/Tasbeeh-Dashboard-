@@ -207,6 +207,10 @@ const swaggerDefinition = {
       description: 'User authentication and authorization endpoints',
     },
     {
+      name: 'Users',
+      description: 'User management and profile endpoints',
+    },
+    {
       name: 'Devices',
       description: 'Device management and synchronization endpoints',
     },

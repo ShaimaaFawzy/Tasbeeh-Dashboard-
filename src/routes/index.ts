@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes.js';
 import deviceRoutes from '../modules/device/device.routes.js';
+import userRoutes from '../modules/users/user.routes.js';
 
 /**
  * Main Router
@@ -54,5 +55,6 @@ router.get('/health', (req, res) => {
  */
 router.use('/auth', authRoutes);
 router.use('/devices', deviceRoutes);
+router.use('/users', userRoutes);
 
 export default router;

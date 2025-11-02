@@ -1,9 +1,14 @@
 import { DeviceRepository } from './device.repository.js';
 import { CreateDeviceDTO } from './dtos/create-device.dto.js';
 import { UpdateDeviceDTO } from './dtos/update-device.dto.js';
+import { GetAllDevicesQueryDTO } from './dtos/get-all-devices-query.dto.js';
+import { DeviceItemDTO } from './dtos/get-all-devices-response.dto.js';
 import { ConflictError, NotFoundError } from '../../shared/errors/http-errors.js';
 import { ErrorCode } from '../../shared/errors/error-codes.js';
 import { Device } from '@prisma/client';
+import { calculateSkip, createPaginatedResult, PaginatedResult } from '../../shared/utils/pagination.js';
+import { AuditLogService } from '../../shared/services/audit-log.service.js';
+import { Request } from 'express';
 
 /**
  * Device Service
@@ -38,9 +43,11 @@ export interface PaginatedDeviceResponse {
 
 export class DeviceService {
   private readonly deviceRepository: DeviceRepository;
+  private readonly auditLogService: AuditLogService;
 
   constructor() {
     this.deviceRepository = new DeviceRepository();
+    this.auditLogService = new AuditLogService();
   }
 
   /**
@@ -213,6 +220,60 @@ export class DeviceService {
     });
 
     return this.formatDeviceResponse(updatedDevice);
+  }
+
+  /**
+   * Get all devices with filters and pagination (Admin only)
+   *
+   * Retrieves a paginated list of devices with optional search and filtering.
+   * Logs the admin action to audit log.
+   *
+   * @param query - Query parameters for filtering and pagination
+   * @param req - Express request object (for audit logging)
+   * @returns Paginated devices list
+   */
+  async getAllDevicesForAdmin(
+    query: GetAllDevicesQueryDTO,
+    req: Request
+  ): Promise<PaginatedResult<DeviceItemDTO>> {
+    const { search, filterBy, sortOrder, page, limit } = query;
+
+    // Calculate pagination
+    const skip = calculateSkip(page, limit);
+
+    // Get devices and total count
+    const [devices, totalItems] = await Promise.all([
+      this.deviceRepository.findAllWithFilters(
+        { search, filterBy, sortOrder },
+        { skip, take: limit }
+      ),
+      this.deviceRepository.countAllWithFilters({ search }),
+    ]);
+
+    // Map devices to response DTO
+    const mappedDevices: DeviceItemDTO[] = devices.map((device) => ({
+      deviceId: device.deviceId,
+      linkedUser: device.user.name,
+      pairingDate: device.paringDate.toISOString(),
+      lastSync: device.lastSync.toISOString(),
+      usageCount: device.usageCount,
+    }));
+
+    // Log admin action to audit log
+    if (req.user && req.auditInfo) {
+      await this.auditLogService.logAdminAction({
+        adminId: req.user.userId,
+        adminEmail: req.user.email || '',
+        action: 'GET_ALL_DEVICES',
+        resourceType: 'devices',
+        details: { search, filterBy, sortOrder, page, limit },
+        ipAddress: req.auditInfo.ipAddress,
+        userAgent: req.auditInfo.userAgent,
+        status: 'success',
+      });
+    }
+
+    return createPaginatedResult(mappedDevices, totalItems, page, limit);
   }
 
   /**

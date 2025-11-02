@@ -4,6 +4,7 @@ import { validateBody } from '../../shared/middlewares/validation.middleware.js'
 import { createDeviceSchema } from './dtos/create-device.dto.js';
 import { updateDeviceSchema } from './dtos/update-device.dto.js';
 import { authenticate } from '../../shared/middlewares/auth.middleware.js';
+import { requireAdmin } from '../../shared/middlewares/admin.middleware.js';
 
 /**
  * Device Routes
@@ -78,20 +79,42 @@ router.post(
  * @swagger
  * /api/devices:
  *   get:
- *     summary: Get all devices
- *     description: Retrieve a paginated list of all devices in the system. Supports pagination via query parameters.
+ *     summary: Get all devices (Admin only)
+ *     description: Retrieve a paginated list of all devices with optional search and filtering. Only accessible by admin users. This action is logged to the audit log.
  *     tags:
  *       - Devices
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in device ID or linked user name (case-insensitive)
+ *         example: DEV123
+ *       - in: query
+ *         name: filterBy
+ *         schema:
+ *           type: string
+ *           enum: [deviceStatus, lastSync]
+ *         description: Field to filter/sort by
+ *         example: lastSync
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *         example: desc
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: Page number (starts at 1)
+ *         description: Page number
+ *         example: 1
  *       - in: query
  *         name: limit
  *         schema:
@@ -100,38 +123,77 @@ router.post(
  *           maximum: 100
  *           default: 10
  *         description: Number of items per page
+ *         example: 10
  *     responses:
  *       200:
  *         description: Devices retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/PaginatedDeviceResponse'
- *             example:
- *               success: true
- *               message: Devices retrieved successfully
- *               data:
- *                 devices:
- *                   - id: 987e6543-e21b-12d3-a456-426614174999
- *                     deviceId: DEVICE-ABC-123
- *                     userId: 123e4567-e89b-12d3-a456-426614174000
- *                     paringDate: 2025-11-02T10:30:00Z
- *                     usageCount: 150
- *                     deviceStatus: true
- *                     lastSync: 2025-11-02T10:30:00Z
- *                 total: 100
- *                 page: 1
- *                 limit: 10
- *                 totalPages: 10
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Devices retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     devices:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           deviceId:
+ *                             type: string
+ *                             example: DEV123
+ *                           linkedUser:
+ *                             type: string
+ *                             example: John Doe
+ *                           pairingDate:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2024-01-20T00:00:00.000Z
+ *                           lastSync:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-01-02T10:30:00.000Z
+ *                           usageCount:
+ *                             type: number
+ *                             example: 150
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 30
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 3
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
  *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Admin privileges required
  */
 router.get(
   '/',
   authenticate,
-  deviceController.getAllDevices
+  requireAdmin,
+  deviceController.getAllDevicesForAdmin
 );
 
 /**
